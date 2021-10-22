@@ -1,0 +1,8 @@
+# R-specific
+.Rproj.user
+.Rhistory
+.RData
+*.rda
+*.rds
+
+*test.R
