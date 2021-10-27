@@ -2,7 +2,10 @@
 .Rproj.user
 .Rhistory
 .RData
-*.rda
-*.rds
 
 *test.R
+
+# ignore .rds files which in our case will contain very large objects from
+# the model fits.
+*.rds
+!analysis/mymodels/sp13_bfm_max.rds

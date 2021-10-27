@@ -1,0 +1,442 @@
+---
+title: "Analysis"
+author: '[Guillermo Montero-Melis](https://www.mpi.nl/people/montero-melis-guillermo)'
+date: '`r as.character(Sys.Date())`'
+output:
+  html_document:
+    depth: 2
+    number_sections: yes
+    theme: default
+    toc: yes
+    code_folding: show
+---
+
+Introduction
+============
+
+This script analyzes the results as specified in our Registered Report,
+see [here](https://osf.io/26fbh/).
+
+
+Session set up
+==============
+
+Libraries:
+
+```{r setup, warning = FALSE, message = FALSE}
+library("knitr")
+library("tidyverse")
+library("brms")
+library("egg")  # theme_article()
+library("sjPlot")
+library("lme4")
+theme_set(theme_article(base_size = 18))  # ggplot theme
+knitr::opts_chunk$set(fig.height=4)
+```
+
+Source file where functions are defined:
+
+```{r, message = FALSE}
+source("myfunctions/analysis_fncs.R")
+```
+
+Load experiment data:
+
+```{r}
+# load participant metadata
+ppts <- read_csv("../data/ppt_info.csv")
+# First 60 participants
+d60_w_control <- read_csv("../data/data60.csv") %>%
+  rename(subject = ID_unique)
+d60_w_control <- d60_w_control %>%
+  group_by(subject, trial_exp) %>%
+  mutate(preced_error = preced_error(error))
+# data frame with only the critical conditions
+d60 <- d60_w_control %>% filter(block_type != "CONTROL")
+kable(head(d60))
+# all 77 valid participants
+d77_w_control <- read_csv("../data/data_all.csv") %>%
+  rename(subject = ID_unique)
+d77_w_control <- d77_w_control %>%
+  group_by(subject, trial_exp) %>%
+  mutate(preced_error = preced_error(error))
+# data frame with only the critical conditions
+d77 <- d77_w_control %>% filter(block_type != "CONTROL")
+```
+
+Load the model fitted to the original data (see re-analysis - Appendix B)
+and extract the posterior for the critical interaction effect for later use
+as the prior for the replication Bayes factor:
+
+```{r}
+# Load brms model fitted to original data. It's a list with three objects: the
+# full model is the first element of that list:
+bfm_orig <- readRDS("mymodels/sp13_bfm_max.rds")[[1]]
+# Extract posterior estimates for the critical interaction effect from the brms
+# model (pull converts it to a numerical vector):
+beta_posterior <- pull(posterior_samples(bfm_orig, "b_mv_wt"))
+sp13_posterior <- c(mean(beta_posterior), sd(beta_posterior))
+names(sp13_posterior) <- c("M", "SD")
+sp13_posterior
+```
+
+```{r}
+# here and below I remove unneeded objects from the workspace to avoid memory
+# management issues ("cannot allocate vector of size..."); see
+# https://stackoverflow.com/questions/5171593/r-memory-management-cannot-allocate-vector-of-size-n-mb
+rm(bfm_orig)  # memory management
+```
+
+
+
+Participant descriptives
+========================
+
+Participant age
+
+```{r}
+summary(ppts$age)
+sd(ppts$age)
+```
+
+Sex/gender:
+
+```{r}
+table(ppts$sex)
+```
+
+
+Paradiddle speed:
+
+```{r}
+se <- function(x) { sd(x) / sqrt(length(x)) }
+# hands
+mean(ppts$BPM_hands)
+sd(ppts$BPM_hands)
+se(ppts$BPM_hands)
+# feet
+mean(ppts$BPM_feet)
+sd(ppts$BPM_feet)
+se(ppts$BPM_feet)
+```
+
+Handedness:
+
+```{r}
+summary(ppts$hand_quot)
+sd(ppts$hand_quot)
+```
+
+
+
+Main results with $N=77$ (all participants)
+=========================
+
+We continued collecting participants while processing the data for our first
+pre-registered analysis for $N=60$. We stopped data collection as soon as we
+obtained reliable evidence (based on Bayes factor, see below). By then we had
+collected 77 participants in total. Here we report the results of the analysis
+for all $N=77$ participants, which constitutes our main results.
+
+
+Visualization of raw data
+------------------------
+
+Critical conditions:
+
+```{r plot_raw_d77}
+plot_raw_data(d77_w_control, "N = 77")
+my_ggsave("SP13_replication_raw_d77", 6, 4)
+```
+
+Including the control condition for comparison:
+
+```{r}
+plot_raw_data(d77_w_control, "N = 77", excl_CONTROL = FALSE)
+my_ggsave("SP13_replication_raw_control_d77", 6, 4)
+```
+
+
+Analysis with pre-registered analysis pipeline
+-------------------------------------------
+
+### Main analysis - with weakly informative priors
+
+Fit the models (or load if already fitted):
+
+```{r}
+ptm <- proc.time()
+# analysis_pipe() tries to load the models from disk and fits them if that fails
+results_brms_d77 <- analysis_pipe(d77)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+Visualization of the model estimates:
+
+```{r}
+plot_mymodel(results_brms_d77[[1]], "N = 77")
+my_ggsave("SP13_replication_model_estim_d77", 6, 6)
+plot_interaction(results_brms_d77[[1]], "N = 77")
+my_ggsave("SP13_replication_model_interact_d77", 6, 6)
+```
+
+Model summaries:
+
+```{r}
+summary(results_brms_d77[[1]])  # full
+summary(results_brms_d77[[2]])  # null
+```
+
+
+### Bayes factor
+
+Compute Bayes Factor:
+
+```{r}
+ptm <- proc.time()
+results_brms_d77_BF <- my_BF_wrapper(results_brms_d77)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d77_BF
+1 / results_brms_d77_BF$bf
+```
+
+```{r}
+# memory management
+rm(results_brms_d77, results_brms_d77_BF)
+```
+
+
+
+### Secondary analysis - replication BF using original results from SP13 as priors
+
+Fit the models:
+
+```{r}
+ptm <- proc.time()
+results_brms_d77_repBF <- analysis_pipe(d77, repBF = TRUE, repBF_post = sp13_posterior)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+
+Model summaries:
+
+```{r}
+summary(results_brms_d77_repBF[[1]])  # full
+summary(results_brms_d77_repBF[[2]])  # null
+```
+
+
+Compute Bayes Factor:
+
+```{r compute_bf_d77_repBF}
+ptm <- proc.time()
+results_brms_d77_repBF_BF <- my_BF_wrapper(results_brms_d77_repBF)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d77_repBF_BF
+1 / results_brms_d77_repBF_BF$bf
+```
+
+```{r}
+# memory management
+rm(results_brms_d77_repBF, results_brms_d77_repBF_BF)
+```
+
+
+Control condition and sanity checks
+-----------------
+
+First, we verify that there weren't any ceiling effects in any of our 
+experimental cells:
+
+```{r}
+d77 %>%
+  group_by(subject, block_type, word_type) %>%
+  summarise(Error = mean(error)) %>%
+  group_by(block_type, word_type) %>%
+  summarise(
+    M = mean(Error),
+    SD = sd(Error),
+    min = min(Error),
+    max = max(Error),
+    n = n()
+  )
+```
+
+
+The control condition allows us to evaluate if there were any baseline
+differences in how easy arm- vs leg-words were to remember:
+
+```{r}
+results_brms_control_d77_w_control <- analysis_control(d77_w_control)
+```
+
+```{r}
+summary(results_brms_control_d77_w_control)
+```
+
+
+Fit the pre-registered GLMM:
+
+```{r}
+ptm <- proc.time()
+results_lme4_control_d77_w_control <- analysis_control_lme4(d77_w_control)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+```{r}
+summary(results_lme4_control_d77_w_control)
+```
+
+
+```{r}
+# memory management
+rm(results_brms_control_d77_w_control)#, fm_control)
+```
+
+
+
+Results with $N=60$
+====================
+
+Visualization of raw data
+------------------------
+
+Critical conditions:
+
+```{r}
+plot_raw_data(d60_w_control, "N = 60")
+my_ggsave("SP13_replication_raw_d60", 6, 4)
+```
+
+Including the control condition for comparison:
+
+```{r}
+plot_raw_data(d60_w_control, "N = 60", excl_CONTROL = FALSE)
+my_ggsave("SP13_replication_raw_control_d60", 6, 4)
+```
+
+
+Analysis with pre-registered analysis pipeline
+-------------------------------------------
+
+### Main analysis - with weakly informative priors
+
+Fit the models (or load if already fitted):
+
+```{r fit_brms_d60}
+ptm <- proc.time()
+# analysis_pipe() tries to load the models from disk and fits them if that fails
+results_brms_d60 <- analysis_pipe(d60)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+Visualization of the model estimates:
+
+```{r}
+plot_mymodel(results_brms_d60[[1]], "N = 60")
+my_ggsave("SP13_replication_model_estim_d60", 6, 6)
+plot_interaction(results_brms_d60[[1]], "N = 60")
+my_ggsave("SP13_replication_model_interact_d60", 6, 6)
+```
+
+Model summaries:
+
+```{r}
+summary(results_brms_d60[[1]])  # full
+summary(results_brms_d60[[2]])  # null
+```
+
+
+### Bayes factor
+
+Compute Bayes Factor:
+
+```{r}
+ptm <- proc.time()
+results_brms_d60_BF <- my_BF_wrapper(results_brms_d60)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d60_BF
+1 / results_brms_d60_BF$bf
+```
+
+```{r}
+# memory management
+rm(results_brms_d60, results_brms_d60_BF)
+```
+
+
+### Secondary analysis - replication BF using original results from SP13 as priors
+
+Fit the models:
+
+```{r}
+ptm <- proc.time()
+results_brms_d60_repBF <- analysis_pipe(d60, repBF = TRUE, repBF_post = sp13_posterior)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+
+Model summaries:
+
+```{r}
+summary(results_brms_d60_repBF[[1]])  # full
+summary(results_brms_d60_repBF[[2]])  # null
+```
+
+
+Compute Bayes Factor:
+
+```{r}
+ptm <- proc.time()
+results_brms_d60_repBF_BF <- my_BF_wrapper(results_brms_d60_repBF)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d60_repBF_BF
+1 / results_brms_d60_repBF_BF$bf
+```
+
+
+
+Session info
+============
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,216 @@
+---
+title: "Trial/participant exclusion"
+author: '[Guillermo Montero-Melis](https://www.mpi.nl/people/montero-melis-guillermo)'
+date: '`r as.character(Sys.Date())`'
+output:
+  html_document:
+    depth: 2
+    number_sections: yes
+    theme: default
+    toc: yes
+    code_folding: show
+---
+
+Introduction
+============
+
+This report applies the second exclusion criterion indicated in our Registered
+Report (https://osf.io/26fbh/, p.22) and documents the results:
+
+> 1) We will exclude trials in which the participant starts the oral recall before the beep, that is, if the word onset falls before the end of the 6 second memory phase (see Figure 1).
+> 2) In the two interference conditions, we will exclude trials in which participants fail to execute the interference task, which we define as starting the paradiddle later than 3 seconds into the memory phase (that is, if the first tap is registered later than 3 seconds after the offset of the fourth word in the trial).
+>
+> At the participant level, we will exclude participants for whom either of the above criteria or technical failure (e.g., recording not working) result in excluding more than 30% of the trials across blocks or more than 50% of trials in a single block. All exclusions will take place before the recall data is coded and analysed.
+
+A list of to-be-excluded trials is saved to disk to be read by data processing
+scripts before analysis.
+
+
+Session set up
+==============
+
+Libraries:
+
+```{r setup, warning = FALSE, message = FALSE}
+library("knitr")
+library("tidyverse")
+theme_set(theme_bw())  # ggplot theme
+knitr::opts_chunk$set(fig.height=4)
+```
+
+Source file where functions are defined:
+
+```{r, message = FALSE}
+source("myfunctions/paradiddle_fncs.R")
+```
+
+
+An example first
+======
+
+Extract tapping information from one participant's log file:
+
+```{r}
+log_ex <- extract_tap_info("../data/raw_data/1_sp13_replication_swe_2020_Oct_30_1334.log")
+```
+
+Plot taps for this participant. 
+For the first practice trials there should be no tapping, so this plot should be
+empty:
+
+```{r, fig.height=1}
+plot_taps(log_ex, "word_presentation_practice")
+```
+
+Block-specific training trials:
+
+```{r, fig.height=2}
+plot_taps(log_ex, "word_presentation_training")
+```
+
+Real trials:
+
+```{r, fig.height=8}
+plot_taps(log_ex, "word_presentation")
+```
+
+For exclusion, we *only* care about whether they started the paradiddle before
+3 seconds of the memory period had ellapsed. In this case, for instance, trials
+2 and 3 from the arm block will have to be excluded.
+
+The following function computes this; we show only the 6 first trials of the
+arm block (block 2):
+
+```{r}
+compute_valid(log_ex) %>% head(6) %>% kable(digits = 3) 
+```
+
+
+
+Compute valid/invalid trials for all participants
+============================================
+
+Make a list of all valid participant files:
+
+```{r}
+# save the name of all log files into vector
+path <- "../data/raw_data/"
+logfiles <- list.files(path, pattern = ".*\\.log")  # select .log files
+
+# get the participant ID for each logfile
+logfiles_id <- gsub("^(\\d+)_.*", "\\1", logfiles)
+
+# load participant sheet where we've marked who needs to be excluded
+ppt_data <- read_csv("../data/participant_data_raw.csv") %>%
+  select(1:2)
+names(ppt_data)[2] <- "valid"
+# select valid participants and extract their ID
+ppt_data <- ppt_data %>%
+  filter(valid %in% c(1, 2)) %>%  # values of 1 and 2 are valid
+  mutate(valid_id = gsub("^(\\d+),.*", "\\1", pptID))  # copy ppt ID to column
+
+# vector of valid participant IDs
+valid_ids <- unique(ppt_data$valid_id)
+
+# only keep logfiles of valid participants
+logfiles_valid <- logfiles[logfiles_id %in% valid_ids]
+# exclude also those that contain "excl" (marked by RA to be excluded)
+logfiles_valid <- logfiles_valid[! grepl("excl", logfiles_valid)]
+```
+
+For each participant, compute how many trials need to be excluded by block:
+
+```{r, message=FALSE}
+# create a dataframe of all trials marking if they need to be excluded or not
+ppt_valid_trials <- map(logfiles_valid, function(logf) {
+  full_path <- paste0(path, logf)
+  extract_tap_info(full_path) %>%
+    compute_valid()
+  }) %>%
+  bind_rows()
+```
+
+```{r}
+# summarize the results by participant
+ppt_valid_trials_summary <- compute_valid_summary(ppt_valid_trials)
+```
+
+
+Apply exclusion criteria
+========================
+
+Participant-block combinations with more than 50% invalid trials?
+
+```{r}
+ppt_valid_trials_summary %>%
+  filter(prop_invalid > .5)
+```
+
+**No exclusions of entire blocks based on this criterion.**
+
+
+Participants with more than 30% invalid trials across both critical blocks?
+
+```{r}
+ppt_valid_trials_summary %>%
+  group_by(ppt_file) %>%
+  summarise(prop_invalid = mean(prop_invalid)) %>%
+  filter(prop_invalid > .3)
+```
+
+**No exclusions of whole participants based on this criterion either.**
+
+**Conclusion**
+
+Only trial-level exclusion need to be done!
+
+
+Save a file to disk with the trials that need to be excluded
+===========================================================
+
+```{r}
+# rename columns for compatibility with the data processing script where this
+# is going to be used:
+excluded_trials <- ppt_valid_trials %>%
+  ungroup() %>%
+  filter(valid == 0) %>%
+  mutate(
+    # ID unique is participant number and DateTime as per log file
+    ID_unique = gsub(".*ta/(\\d+)_.*_(202\\d.*)\\.log", "\\1_\\2", ppt_file),
+    trial_block = trial + 1  # trial_block = 1, ..., 26
+  ) %>%
+  select(ID_unique, block, trial_block) %>%
+  arrange(ID_unique, block, trial_block)
+head(excluded_trials)
+```
+
+Save to disk:
+
+```{r}
+write_csv(excluded_trials, "../data/excluded_trials_bc_of_paradiddle.csv")
+```
+
+
+
+Appendix: complete lists of invalid trials
+=========================
+
+First a list of invalid trials per participant
+
+```{r}
+ppt_valid_trials_summary %>%
+  group_by(ppt_file) %>%
+  summarise(prop_invalid = mean(prop_invalid)) %>%
+  arrange(-prop_invalid) %>%
+  kable(digits = 3)
+```
+
+Next a list of invalid trials per participant-block
+
+```{r}
+ppt_valid_trials_summary %>%
+  arrange(- prop_invalid) %>%
+  kable(digits = 3)
+```
+
+
