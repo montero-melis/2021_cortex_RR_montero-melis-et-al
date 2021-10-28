@@ -19,6 +19,8 @@ What follows is an explanation of all contents, folder by folder.
 Root folder
 ===========
 
+- `.gitattributes`: git-specific file that specifies which large files should
+be handled by GitHub's LFS system (namely `.rds` files).
 - `.gitignore`: standard file in git repositories to specify which files should
 not be tracked.
 - `2021_sp13_cortex_stage2.Rproj`: Use this to launch an R project from
@@ -43,10 +45,10 @@ that is the case. If the model hasn't been fitted, it will fit it and save it
 disk. Model fitting can be *extremely* time consuming. The brms models can take
 around 20 hours on a machine with 16 GB RAM. So be prepared if you run this
 script from scratch.
-- `get_data.R`: R script that will fetch the raw data (from `data/raw_data/`)
-and process it. The script will also save the processed datasets to disk. It is
+- `get_data.R`: R script that fetches the raw data (from `data/raw_data/`) and
+processes it. The script will also save the processed datasets to disk. It is
 included for documentation and reproducibility purposes, but the data files it
-generates are already included here (see `data/`).
+generates are already included in this repository (see `data/` folder).
 - `interrater_agreement.R`: R script to compute the interrater agreement as
 specified in our pre-registration. It does so by comparing the sample data
 transcribed by two native speakers of Swedish (these datasets are 
@@ -91,10 +93,10 @@ paradiddles executed on the drum pads; see `analysis/trial_exclusion.Rmd`.
 This folder will by default only contain one file, `sp13_bfm_max.rds`. This is
 the model we fit to the original data from Shebani and Pulvermüller (details
 explained in Appendix B, see `appendices/`).
-This is also the model in which the fitted models will be stored if you run the
+It is also the folder in which the fitted models will be stored if you run the
 `analysis/analysis.Rmd` script. The models take a long time to run and they are
 also extremely large objects; that is why they are not included in this 
-repository.
+repository, except for the one that was already part of our Stage 1 submission.
 
 
 
@@ -102,8 +104,8 @@ repository.
 =============
 
 Appendices A-H were part of the Stage 1 submission (i.e., prior to any data
-collection). The remaining appendices (I-K) are part of the Stage 2 submission.
-See manuscript for a more detailed description.
+collection). The remaining appendices (I--M) are part of the Stage 2 submission.
+See manuscript for a more detailed description of each.
 
 
 
@@ -119,7 +121,7 @@ columns:
   - *ID*: Participant identifier. This is an integer only and does not include
   date and time of experiment. These integers do not uniquely identify all 
   participants (there are one or two doublets), so *ID_unique* is needed. We're
-  leaving this column to avoid errors in some of the scripts
+  leaving this column to avoid compatibility errors in some of the scripts.
   - *block*: Specifies the order in which participants carried out each of the
   three blocks.
   - *block_type*: Specifies the type of block (control, arm interference, leg
@@ -127,11 +129,11 @@ columns:
   - *trial_block*: The trial number within a block. A trial here consists of
   the four words shown to the participants, the memory period, and the recall
   period. Each block consisted of 26 trials. Note that each trial is spread
-  over four rows, one for each word.
+  over four rows, one for each of the verbs that had to be kept in memory.
   - *word_type*: Whether the words shown in a particular trial were arm-related
   ("arm") or leg-related ("leg").
   - *trial_exp*: A counter of all the trials in the experiment, across all
-  three blocks. There were 78 trials in each session.
+  three blocks. There were 78 trials in each experiment session.
   - *word_pos*: Word position within a trial. Each row represents one of the
   four words per trial and this column specifies which one it is (1-4).
   - *verb*: The actual verb shown
@@ -152,7 +154,7 @@ The column names have the same interpretation as in `data_all.csv` (see above).
 - `handedness.csv`: Results of the handedness questionnaire (see 
 `appendices/Appendix_M1_handedness_form_SWE.pdf`). Column description:
   - *Subject*: Uniquely identifies each subject, either with their ID integer
-  if there is no ambiguity or adding the date time information if there are
+  if there is no ambiguity or adding the date time information if there is
   more than one participant with the same ID.
   - *Item*: Each of the 10 questions of the handedness form.
   - *Response*: A transcription of the participant response. 2 means two plus
@@ -160,7 +162,8 @@ The column names have the same interpretation as in `data_all.csv` (see above).
   preference (one plus sign on each side), -1 denotes one plus sign for a 
   left-hand preference, -2 denotes two such plus signs. In sum, positive
   numbers indicate right-handedness for a specific action, negative numbers
-  left-handedness.
+  left-handedness. See Appendix M (in `appendices/`) to see the actual
+  questionnaire.
 
 - `participant_data_raw.csv`: Participant data as recorded by the Research
 Assistant. It contains responses to the background questionnaire (Appendix L),
@@ -255,8 +258,8 @@ its structure is identical to `transcription_MB.tsv` and
 ----------------------
 
 Contains all essential output files generated by the PsychoPy experiment used
-for data collection. All .csv files are processed in the script 
-`analysis/get_data.R`. The .log files contain the information about paradiddle
+for data collection. All `.csv` files are processed in the script 
+`analysis/get_data.R`. The `.log` files contain the information about paradiddle
 execution; they are processed in the script `analysis/trial_exclusion.Rmd`.
 
 
