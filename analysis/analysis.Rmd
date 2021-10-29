@@ -14,14 +14,22 @@ output:
 Introduction
 ============
 
-This script analyzes the results as specified in our Registered Report,
-see [here](https://osf.io/26fbh/).
+This script fully documents the results and control analyses reported in
+
+Montero-Melis et al., 2021. No evidence for embodiment: The motor system is not
+needed to keep action words in working memory. Submitted to *Cortex* (Stage 2
+Registered Report).
+
+The script follows our pre-registered analyses as specified in the Stage 1
+submission of our Registered Report, which can be found
+[here](https://osf.io/26fbh/). The analyses are ordered in the same way as in
+the article.
 
 
 Session set up
 ==============
 
-Libraries:
+Load libraries:
 
 ```{r setup, warning = FALSE, message = FALSE}
 library("knitr")
@@ -72,6 +80,7 @@ as the prior for the replication Bayes factor:
 # Load brms model fitted to original data. It's a list with three objects: the
 # full model is the first element of that list:
 bfm_orig <- readRDS("mymodels/sp13_bfm_max.rds")[[1]]
+
 # Extract posterior estimates for the critical interaction effect from the brms
 # model (pull converts it to a numerical vector):
 beta_posterior <- pull(posterior_samples(bfm_orig, "b_mv_wt"))
@@ -92,21 +101,21 @@ rm(bfm_orig)  # memory management
 Participant descriptives
 ========================
 
-Participant age
+## Participant age
 
 ```{r}
 summary(ppts$age)
 sd(ppts$age)
 ```
 
-Sex/gender:
+## Sex/gender
 
 ```{r}
 table(ppts$sex)
 ```
 
 
-Paradiddle speed:
+## Paradiddle speed
 
 ```{r}
 se <- function(x) { sd(x) / sqrt(length(x)) }
@@ -120,7 +129,7 @@ sd(ppts$BPM_feet)
 se(ppts$BPM_feet)
 ```
 
-Handedness:
+## Handedness
 
 ```{r}
 summary(ppts$hand_quot)
@@ -133,10 +142,12 @@ Main results with $N=77$ (all participants)
 =========================
 
 We continued collecting participants while processing the data for our first
-pre-registered analysis for $N=60$. We stopped data collection as soon as we
-obtained reliable evidence (based on Bayes factor, see below). By then we had
-collected 77 participants in total. Here we report the results of the analysis
-for all $N=77$ participants, which constitutes our main results.
+pre-registered analysis for $N=60$. We stopped data collection when the analysis
+with $N=60$ showed reliable evidence in favor of the null hypothesis (based on
+our pre-defined Bayes factor, see manuscript and below). By then we had
+collected 77 participants in total. 
+**Here we report the results of the analyses with all 77 participants**, which
+constitute our main results.
 
 
 Visualization of raw data
@@ -162,7 +173,11 @@ Analysis with pre-registered analysis pipeline
 
 ### Main analysis - with weakly informative priors
 
-Fit the models (or load if already fitted):
+#### Model fitting
+
+Fit the models (or load if already fitted). Note that the function used for the
+analysis is defined in a separate script sourced at the beginning of this report
+(see `analysis/myfunctions/analysis_fncs.R` in this repository).
 
 ```{r}
 ptm <- proc.time()
@@ -173,6 +188,9 @@ time_models <- proc.time() - ptm
 time_models
 ```
 
+
+#### Model visualization
+
 Visualization of the model estimates:
 
 ```{r}
@@ -182,7 +200,10 @@ plot_interaction(results_brms_d77[[1]], "N = 77")
 my_ggsave("SP13_replication_model_interact_d77", 6, 6)
 ```
 
-Model summaries:
+
+#### Model summaries
+
+Model summaries for each of the two models, the full and the null version:
 
 ```{r}
 summary(results_brms_d77[[1]])  # full
@@ -190,7 +211,7 @@ summary(results_brms_d77[[2]])  # null
 ```
 
 
-### Bayes factor
+#### Bayes factor
 
 Compute Bayes Factor:
 
@@ -218,6 +239,8 @@ rm(results_brms_d77, results_brms_d77_BF)
 
 ### Secondary analysis - replication BF using original results from SP13 as priors
 
+#### Model fitting
+
 Fit the models:
 
 ```{r}
@@ -229,6 +252,8 @@ time_models
 ```
 
 
+#### Model summaries
+
 Model summaries:
 
 ```{r}
@@ -237,7 +262,9 @@ summary(results_brms_d77_repBF[[2]])  # null
 ```
 
 
-Compute Bayes Factor:
+#### Replication Bayes factor
+
+Compute Replication Bayes factor:
 
 ```{r compute_bf_d77_repBF}
 ptm <- proc.time()
@@ -260,8 +287,25 @@ rm(results_brms_d77_repBF, results_brms_d77_repBF_BF)
 ```
 
 
-Control condition and sanity checks
+Data exclusion, quality checks and other control analyses
 -----------------
+
+### Data exclusion
+
+Data exclusion is documented in a separate script that is part of the current
+repository. The report documenting data exclusion is
+`analysis/trial_exclusion.html`; the source knitr script that generates it is
+`analysis/trial_exclusion.Rmd`.
+
+
+### Inter-rater reliability in data coding
+
+Inter-rater reliability analysis is documented in a separate R script that is
+part of the current repository; please see
+`analysis/interrater_agreement.R`.
+
+
+### Floor or celing effects?
 
 First, we verify that there weren't any ceiling effects in any of our 
 experimental cells:
@@ -281,31 +325,49 @@ d77 %>%
 ```
 
 
-The control condition allows us to evaluate if there were any baseline
-differences in how easy arm- vs leg-words were to remember:
+### Positive control
+
 
 ```{r}
-results_brms_control_d77_w_control <- analysis_control(d77_w_control)
-```
-
-```{r}
-summary(results_brms_control_d77_w_control)
-```
-
-
-Fit the pre-registered GLMM:
-
-```{r}
+# Fit the pre-registered GLMM:
 ptm <- proc.time()
-results_lme4_control_d77_w_control <- analysis_control_lme4(d77_w_control)
+fm_lme4_positive_control_d77 <- positive_control_lme4(d77)
 # Stop the clock
 time_models <- proc.time() - ptm
 time_models
 ```
 
+Model summary:
+
 ```{r}
-summary(results_lme4_control_d77_w_control)
+summary(fm_lme4_positive_control_d77)
 ```
+
+
+### Comparison to control condition (no interference)
+
+The control condition allows us to evaluate if there were any baseline
+differences in how easy arm- vs leg-words were to remember.
+
+
+#### Bayesian model
+
+We fit a new model with the control condition:
+
+```{r}
+# for details of model fitting procedure, see 
+# "analysis/myfunctions/analysis_fncs.R"
+results_brms_control_d77_w_control <- analysis_control(d77_w_control)
+```
+
+
+Model summary:
+
+```{r}
+summary(results_brms_control_d77_w_control)
+```
+
+See manuscript for interpretation of the model results.
 
 
 ```{r}
@@ -316,7 +378,16 @@ rm(results_brms_control_d77_w_control)#, fm_control)
 
 
 Results with $N=60$
-====================
+===================
+
+In the article, we report the analyses with all 77 participants, as these should
+provide the most robust estimates of the effects. However, none of our 
+conclusions hinges on this choice. Below, we run identical analyses with our
+first 60 participants. None of the crucial results change; there are only minor
+differences in the model estimates for our predictors and generally slightly
+larger 95% credible intervals, as might be expected from the somewhat reduced
+sample size.
+
 
 Visualization of raw data
 ------------------------
@@ -341,6 +412,8 @@ Analysis with pre-registered analysis pipeline
 
 ### Main analysis - with weakly informative priors
 
+#### Model fitting
+
 Fit the models (or load if already fitted):
 
 ```{r fit_brms_d60}
@@ -352,6 +425,9 @@ time_models <- proc.time() - ptm
 time_models
 ```
 
+
+#### Model visualization
+
 Visualization of the model estimates:
 
 ```{r}
@@ -361,7 +437,10 @@ plot_interaction(results_brms_d60[[1]], "N = 60")
 my_ggsave("SP13_replication_model_interact_d60", 6, 6)
 ```
 
-Model summaries:
+
+#### Model summaries
+
+Model summaries for each of the two models, the full and the null version:
 
 ```{r}
 summary(results_brms_d60[[1]])  # full
@@ -369,7 +448,7 @@ summary(results_brms_d60[[2]])  # null
 ```
 
 
-### Bayes factor
+#### Bayes factor
 
 Compute Bayes Factor:
 
@@ -396,6 +475,8 @@ rm(results_brms_d60, results_brms_d60_BF)
 
 ### Secondary analysis - replication BF using original results from SP13 as priors
 
+#### Model fitting
+
 Fit the models:
 
 ```{r}
@@ -407,6 +488,8 @@ time_models
 ```
 
 
+#### Model summaries
+
 Model summaries:
 
 ```{r}
@@ -415,7 +498,9 @@ summary(results_brms_d60_repBF[[2]])  # null
 ```
 
 
-Compute Bayes Factor:
+#### Replication Bayes factor
+
+Compute Replication Bayes factor:
 
 ```{r}
 ptm <- proc.time()

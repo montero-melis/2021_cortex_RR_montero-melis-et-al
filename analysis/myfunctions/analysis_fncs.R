@@ -298,6 +298,83 @@ my_BF_wrapper <- function(
 }
 
 
+###########################################################
+## Quality check / positive control (effect of serial position)
+###########################################################
+
+# In our pre-registration we wrote we would use lme4 for our positive control
+# testing for an effect of serial position on recall. This function does this
+# analysis using lme4, as pre-registered.
+
+positive_control_lme4 <- function(df) {  # expects data frame in a specific format, incl control condition
+
+  # to be used for filename
+  df_name <- deparse(substitute(df))
+  # name of the file where results are saved (or have been saved if run earlier)
+  file_name <- paste0("mymodels/fm_lme4_positive_control_", df_name, ".rds")
+
+  # If model list has been saved to disk, load it and **RETURN**,
+  # otherwise fit the models
+  if (file.exists(file_name)) {
+    cat("The model", file_name, "exists on disk, so we load it...\n\n")
+    return(readRDS(file_name))
+  } else {
+    cat("The model", file_name, "doesn't exist on disk, so we will fit it.",
+        "\nThis will take some time. Don't let your computer go to sleep!\n\n")    
+  }
+
+  ## coding scheme: contrast code factors and standardize numerical predictors
+  cat("Coding scheme:\n\n")
+  
+  # block_type: set CONTROL as the reference condition for sum contrasts
+  df$block_type <- factor(df$block_type, levels = c("ARM", "LEG"))
+  contrasts(df$block_type) <- contr.sum(2)
+  colnames(contrasts(df$block_type)) <- "arm_vs_leg"
+  # verify result
+  print("df$block_type")
+  print(contrasts(df$block_type))
+  cat("\n")
+
+  # sum contrasts for word type
+  df$word_type <- factor(df$word_type)
+  contrasts(df$word_type) <- contr.sum(2)
+  colnames(contrasts(df$word_type)) <- "arm_vs_leg"
+  print("df$word_type")
+  print(contrasts(df$word_type))
+  cat("\n")
+
+  # scale the other predictors
+  df$trial_exp_z <- scale(df$trial_exp)
+  df$word_pos_z <- scale(df$word_pos)
+  df$preced_error_z <- scale(df$preced_error)
+  
+  # Formula of the full model (as pre-registered):
+  formula_full <- as.formula(paste(
+    "error ~",
+    "word_pos_z + trial_exp_z + preced_error_z + word_type + block_type +",
+    "(1 + word_pos_z | subject) + (1 | verb)"
+  ))
+  cat("FULL model formula:\n\n")
+  print(formula_full)
+
+  ## fit glmer model
+  fm_posit_control <- glmer(
+    formula = formula_full,
+    data = df,
+    family = "binomial"
+  )
+
+  # save fm to disk:
+  saveRDS(fm_posit_control, file = file_name)
+  
+fm_posit_control
+}
+
+
+###########################################################
+## Comparison to control condition
+###########################################################
+
 # This function almost replicates the analysis_pipe() function, but it is used
 # to analyze the data including the control condition (seen as the reference);
 # we don't have a "null" model, only the full model
@@ -385,72 +462,4 @@ analysis_control <- function(df) {  # expects data frame in a specific format, i
   saveRDS(bfm_full, file = file_name)
   
   bfm_full
-}
-
-
-# In our pre-registration we wrote we would use lme4 for our positive control.
-# This function is the lme4 version of analysis_control() above.
-analysis_control_lme4 <- function(df) {  # expects data frame in a specific format, incl control condition
-
-  # to be used for filename
-  df_name <- deparse(substitute(df))
-  # name of the file where results are saved (or have been saved if run earlier)
-  file_name <- paste0("mymodels/results_lme4_control_", df_name, ".rds")
-
-  # If model list has been saved to disk, load it and **RETURN**,
-  # otherwise fit the models
-  if (file.exists(file_name)) {
-    cat("The model", file_name, "exists on disk, so we load it...\n\n")
-    return(readRDS(file_name))
-  } else {
-    cat("The model", file_name, "doesn't exist on disk, so we will fit it.",
-        "\nThis will take some time. Don't let your computer go to sleep!\n\n")    
-  }
-
-  ## coding scheme: contrast code factors and standardize numerical predictors
-  cat("Coding scheme:\n\n")
-  
-  # block_type: set CONTROL as the reference condition for sum contrasts
-  df$block_type <- factor(df$block_type, levels = c("ARM", "LEG", "CONTROL"))
-  contrasts(df$block_type) <- contr.sum(3)
-  colnames(contrasts(df$block_type)) <- c("arm_vs_control", "leg_vs_control")
-  # verify result
-  print("df$block_type")
-  print(contrasts(df$block_type))
-  cat("\n")
-
-  # sum contrasts for word type
-  df$word_type <- factor(df$word_type)
-  contrasts(df$word_type) <- contr.sum(2)
-  colnames(contrasts(df$word_type)) <- "arm_vs_leg"
-  print("df$word_type")
-  print(contrasts(df$word_type))
-  cat("\n")
-
-  # scale the other predictors
-  df$trial_exp_z <- scale(df$trial_exp)
-  df$word_pos_z <- scale(df$word_pos)
-  df$preced_error_z <- scale(df$preced_error)
-  
-  # Formula of the full model:
-  formula_full <- as.formula(paste(
-    "error ~",  # DV
-    "1 + block_type * word_type +",  # critical manipulations and interaction
-    "trial_exp_z + word_pos_z + preced_error_z +",  # nuisance predictors
-    "(1 + block_type * word_type | subject) + (1 + block_type | verb)"  # maximal random structure
-  ))
-  cat("FULL model formula:\n\n")
-  print(formula_full)
-
-  ## fit glmer model
-  fm_control <- glmer(
-    formula = formula_full,
-    data = df,
-    family = "binomial"
-  )
-
-  # save fm to disk:
-  saveRDS(fm_control, file = file_name)
-  
-  fm_control
 }

@@ -92,11 +92,16 @@ paradiddles executed on the drum pads; see `analysis/trial_exclusion.Rmd`.
 
 This folder will by default only contain one file, `sp13_bfm_max.rds`. This is
 the model we fit to the original data from Shebani and Pulvermüller (details
-explained in Appendix B, see `appendices/`).
-It is also the folder in which the fitted models will be stored if you run the
+explained in Appendix B, see `appendices/`). Note that this is a large file and
+so it is stored via GitHub's LFS system. If you clone this repo from git, you
+might need to download this file explicitly because the repo it just contains
+a pointer to that file, see https://git-lfs.github.com/.
+
+This is also the folder in which the fitted models will be stored if you run the
 `analysis/analysis.Rmd` script. The models take a long time to run and they are
 also extremely large objects; that is why they are not included in this 
-repository, except for the one that was already part of our Stage 1 submission.
+repository, except for `sp13_bfm_max.rds`, which was already part of our 
+Stage 1 submission.
 
 
 
