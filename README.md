@@ -3,7 +3,7 @@ README
 
 October 2021
 Guillermo Montero-Melis
-guillermo.monteromelis@mpi.nl
+guillermo.monteromelis@mpi.nl / montero.gui@gmail.com
 
 This open and public repository contains all materials accompanying the
 final version (Stage 2 submission) of our Registered Report submitted to the
@@ -41,10 +41,10 @@ Can be opened in any web browser.
 - `analysis.Rmd`: The source code that generates the html report of the same
 name. It mixes chunks of R code with markdown text. Note that model fitting
 functions will first look if a model has already been fitted, and load it if
-that is the case. If the model hasn't been fitted, it will fit it and save it
+that is the case. If the model hasn't been fitted, it will fit it and save it to
 disk. Model fitting can be *extremely* time consuming. The brms models can take
-around 20 hours on a machine with 16 GB RAM. So be prepared if you run this
-script from scratch.
+around 20 hours on a machine with 4 CPU cores at 1.9 GHz. So be prepared if you
+run this script from scratch.
 - `get_data.R`: R script that fetches the raw data (from `data/raw_data/`) and
 processes it. The script will also save the processed datasets to disk. It is
 included for documentation and reproducibility purposes, but the data files it
@@ -74,7 +74,7 @@ and it stores all the figures reported in the paper as .png files.
 -----------------------
 
 This subfolder contains functions that are called in the other scripts. It is
-a way to avoid cluttering the main scripts. I have tried to give expressive
+a way to avoid cluttering the main scripts. We have tried to give transparent
 names to every function so it is clear what they are doing, but if you really
 want to understand what is happening in the analysis and data processing
 scripts, you need to check out the functions here.
@@ -94,7 +94,7 @@ This folder will by default only contain one file, `sp13_bfm_max.rds`. This is
 the model we fit to the original data from Shebani and Pulvermüller (details
 explained in Appendix B, see `appendices/`). Note that this is a large file and
 so it is stored via GitHub's LFS system. If you clone this repo from git, you
-might need to download this file explicitly because the repo it just contains
+might need to download this file explicitly because the repo just contains
 a pointer to that file, see https://git-lfs.github.com/.
 
 This is also the folder in which the fitted models will be stored if you run the
@@ -152,7 +152,7 @@ only difference is that it contains data for the first 60 valid participants
 who finished the experiment.
 
 - `excluded_trials_bc_of_paradiddle.csv`: CSV file that specifies which trials
-have to be excluded from the analysis due to performace on the paradiddles 
+have to be excluded from the analysis due to performance on the paradiddles 
 (following our preregistration). Generated in `analysis/trial_exclusion.Rmd`.
 The column names have the same interpretation as in `data_all.csv` (see above).
 
@@ -241,7 +241,7 @@ paradiddle) and *word_type* (hand- or leg-related words).
 - `transcription_MB.tsv` and `transcription_petrus.tsv`: Transcription files
 used to gauge interrater agreement (see `analysis/interrater_agreement.R`).
 Column description:
-  - *filename*: The exact audiofile that was transcribed (these were generated
+  - *filename*: The exact audio file that was transcribed (these were generated
   by the PsychoPy experiment individually for each trial).
   - *transcription*: Manual transcription provided by the transcriber. Words
   are separated by an empty space. See Appendix I in `appendices/` for
