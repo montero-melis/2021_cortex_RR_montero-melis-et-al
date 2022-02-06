@@ -85,6 +85,7 @@ plot_raw_data <- function(df, mytitle = NULL, excl_CONTROL = TRUE) {
     ylab("Proportion of errors") +
     labs(color = "Word type", shape = "Word type") +
     guides(color = guide_legend(override.aes = list(size = .75))) +
+    ylim(0, 1) +
     ggtitle(mytitle) +
     theme(plot.title = element_text(hjust = 0.5))
   # add lines between conditions if CONTROL is excluded
