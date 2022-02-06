@@ -80,6 +80,10 @@ as the prior for the replication Bayes factor:
 # Load brms model fitted to original data. It's a list with three objects: the
 # full model is the first element of that list:
 bfm_orig <- readRDS("mymodels/sp13_bfm_max.rds")[[1]]
+# If you get an error, it probably means you have to download the actual RDS
+# file. Go to 
+# https://github.com/montero-melis/2021_cortex_RR_montero-melis-et-al/blob/main/analysis/mymodels/sp13_bfm_max.rds
+# download the file and store it in the right path ("analysis/mymodels/sp13_bfm_max.rds")
 
 # Extract posterior estimates for the critical interaction effect from the brms
 # model (pull converts it to a numerical vector):
@@ -373,6 +377,132 @@ See manuscript for interpretation of the model results.
 ```{r}
 # memory management
 rm(results_brms_control_d77_w_control)#, fm_control)
+```
+
+
+Post-hoc analysis of imperative verbs only
+----------------
+
+One of the reviewers of the Stage 2 manuscript (Andrew D. Wilson, who signed his
+review) suggested we perform a post-hoc follow-up analysis based on the 
+linguistic difference we mention in the discussion, namely the fact that all 
+English verbs in the original study *could* be interpreted as an imperative (as
+well as an infinitive, e.g. *kick*), whereas this was the case for only 85% of
+the Swedish verbs.
+
+We quote Andrew Wilson's own words:
+
+> The authors discuss one potential consequence of the switch to Swedish, namely the inclusion of some verbs that would not be treated as imperatives.
+> [...] it seemed to me that there was a quick data-based thing to add here, and that is a quick re-run of the two key Bayes Factor analyses on data from just the trials that used the imperative verbs to see if you suddenly get a different result [...]. 
+> [T]his is the kind of check afforded by your larger sample size and increased number of trials, two good things about this replication, and making it could be a data driven way to address the issue and feed into the point that the larger scale study is a good idea. [...]
+
+In what follows we run precisely those two key Bayes Factor analyses.
+
+
+### Filter the data
+
+```{r}
+# Read list of verbs with information about imperative form from disk
+getwd()
+verbs_imp <- read_csv("../data/verbs_imperatives.csv")
+verbs_imp %>% head() %>% kable()
+# Exclude verbs whose imperative differs from the infinitive
+exclude_verbs <- verbs_imp %>%
+  filter(imperative_differs != 0) %>%
+  pull(infinitive)
+d77_imperat <- d77[! d77$verb %in% exclude_verbs, ]
+```
+
+
+
+### BF analysis with weakly informative priors
+
+```{r}
+ptm <- proc.time()
+# analysis_pipe() tries to load the models from disk and fits them if that fails
+results_brms_d77_imperat <- analysis_pipe(d77_imperat)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+
+#### Model visualization
+
+Visualization of the model estimates:
+
+```{r}
+plot_mymodel(results_brms_d77_imperat[[1]], "N = 77 (imperatives only)")
+my_ggsave("SP13_replication_model_estim_d77_imperat", 6, 6)
+plot_interaction(results_brms_d77_imperat[[1]], "N = 77 (imperatives only)")
+my_ggsave("SP13_replication_model_interact_d77_imperat", 6, 6)
+```
+
+
+#### Bayes factor
+
+Compute Bayes Factor:
+
+```{r}
+ptm <- proc.time()
+results_brms_d77_imperat_BF <- my_BF_wrapper(results_brms_d77_imperat)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d77_imperat_BF
+1 / results_brms_d77_imperat_BF$bf
+```
+
+```{r}
+# memory management
+rm(results_brms_d77_imperat, results_brms_d77_imperat_BF)
+```
+
+
+
+### Secondary analysis - replication BF using original results from SP13 as priors
+
+#### Model fitting
+
+Fit the models:
+
+```{r}
+ptm <- proc.time()
+results_brms_d77_imperat_repBF <- analysis_pipe(d77_imperat, repBF = TRUE, 
+                                                repBF_post = sp13_posterior)
+# Stop the clock
+time_models <- proc.time() - ptm
+time_models
+```
+
+
+#### Replication Bayes factor
+
+Compute Replication Bayes factor:
+
+```{r compute_bf_d77_imperat_repBF}
+ptm <- proc.time()
+results_brms_d77_imperat_repBF_BF <- my_BF_wrapper(results_brms_d77_imperat_repBF)
+time_bridge <- proc.time() - ptm
+time_bridge
+```
+
+
+**Bayes factor:**
+
+```{r}
+results_brms_d77_imperat_repBF_BF
+1 / results_brms_d77_imperat_repBF_BF$bf
+```
+
+```{r}
+# memory management
+rm(results_brms_d77_imperat_repBF, results_brms_d77_imperat_repBF_BF)
 ```
 
 
